@@ -1395,6 +1395,7 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
       shift = entry.blockShift;
       mul = entry.gcd;
       mask = (1 << shift) - 1;
+      System.out.println("Created vBPV-reader with jumpTableOffset=" + entry.valueJumpTableOffset);
     }
 
     long getLongValue(long index) throws IOException {
@@ -1405,7 +1406,9 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
           // If the needed block is the one directly following the current block, it is cheaper to avoid the cache
           if (rankSlice != null && block != this.block+1) {
             blockEndOffset = rankSlice.readLong(block*Long.BYTES)-entry.valuesOffset;
+            System.out.println("vBPV jumped " + (block-this.block) + " blocks (" + this.block + " -> " + block + ")");
             this.block = block-1;
+            System.out.println("vBPV jumped ");
           }
           offset = blockEndOffset;
           bitsPerValue = slice.readByte(offset++);

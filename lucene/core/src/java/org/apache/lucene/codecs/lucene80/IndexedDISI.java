@@ -186,6 +186,7 @@ final class IndexedDISI extends DocIdSetIterator {
       throw new IllegalArgumentException("Acceptable values for denseRankPower are 7-15 (every 128-32768 docIDs). " +
           "The provided power was " + denseRankPower + " (every " + (int)Math.pow(2, denseRankPower) + " docIDs)");
     }
+
     int totalCardinality = 0;
     int blockCardinality = 0;
     final FixedBitSet buffer = new FixedBitSet(1<<16);
@@ -225,7 +226,10 @@ final class IndexedDISI extends DocIdSetIterator {
     buffer.set(DocIdSetIterator.NO_MORE_DOCS & 0xFFFF);
     flush(DocIdSetIterator.NO_MORE_DOCS >>> 16, buffer, 1, denseRankPower, out);
     // offset+index jump-table stored at the end
-    return flushBlockJumps(jumps, lastBlock+1, out, origo);
+    short b = flushBlockJumps(jumps, lastBlock+1, out, origo);
+    System.out.println("Wrote IndexedDISI(denseRankPower=" + denseRankPower + ", jumpTableEntryCount=" + b + ")");
+
+    return b;
   }
 
   // Adds entries to the offset & index jump-table for blocks
@@ -299,7 +303,7 @@ final class IndexedDISI extends DocIdSetIterator {
       throw new IllegalArgumentException("Acceptable values for denseRankPower are 7-15 (every 128-32768 docIDs). " +
           "The provided power was " + denseRankPower + " (every " + (int)Math.pow(2, denseRankPower) + " docIDs). ");
     }
-
+    System.out.println("Created IndexedDISI(denseRankPower=" + denseRankPower + ", jumpTableEntryCount=" + jumpTableEntryCount + ")");
     this.slice = blockSlice;
     this.jumpTable = jumpTable;
     this.jumpTableEntryCount = jumpTableEntryCount;
@@ -405,6 +409,7 @@ final class IndexedDISI extends DocIdSetIterator {
     final int blockIndex = targetBlock >> 16;
     // If the destination block is 2 blocks or more ahead, we use the jump-table.
     if (jumpTable != null && blockIndex >= (block >> 16)+2) {
+      System.out.println("advanceBlock jumped " + ((block >> 16) - blockIndex) + " blocks (" + blockIndex + " -> " + (block >> 16) + ")");
       // If the jumpTableEntryCount is exceeded, there are no further bits. Last entry is always NO_MORE_DOCS
       final int inRangeBlockIndex = blockIndex < jumpTableEntryCount ? blockIndex : jumpTableEntryCount-1;
       final int index = jumpTable.readInt(inRangeBlockIndex*Integer.BYTES*2);
@@ -560,6 +565,7 @@ final class IndexedDISI extends DocIdSetIterator {
         // If the distance between the current position and the target is < rank-longs
         // there is no sense in using rank
         if (disi.denseRankPower != -1 && targetWordIndex - disi.wordIndex >= (1 << (disi.denseRankPower-6) )) {
+          System.out.println("rankSkip jumping " + (targetWordIndex-disi.wordIndex) + " words (from " + disi.wordIndex + " -> " + targetWordIndex + ")");
           rankSkip(disi, targetInBlock);
         }
 
